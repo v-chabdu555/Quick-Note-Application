@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Quick Notes</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #1a1f2e;
+      color: #f0ede6;
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    .container { max-width: 680px; margin: 0 auto; }
+
+    h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 2rem;
+      font-weight: 700;
+      color: #e8a857;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      color: #8892a4;
+      font-size: 0.9rem;
+      margin-bottom: 32px;
+    }
+
+    .write-box {
+      background: #2d3347;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 40px;
+      border: 1px solid #3a4060;
+    }
+
+    .write-box input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #f0ede6;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #3a4060;
+    }
+
+    .write-box input::placeholder { color: #4a5470; }
+
+    .write-box textarea {
+      width: 100%;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.95rem;
+      color: #c8c2b8;
+      resize: none;
+      min-height: 100px;
+      line-height: 1.6;
+    }
+
+    .write-box textarea::placeholder { color: #4a5470; }
+
+    .actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 16px;
+    }
+
+    .btn-save {
+      background: #e8a857;
+      color: #1a1f2e;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 24px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .btn-save:hover { opacity: 0.85; }
+    .btn-save:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .notes-header {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      color: #4a5470;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .note-card {
+      background: #2d3347;
+      border-radius: 10px;
+      padding: 20px 20px 20px 24px;
+      margin-bottom: 14px;
+      border-left: 3px solid #e8a857;
+      animation: fadeIn 0.3s ease;
+      position: relative;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .note-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 1rem;
+      color: #f0ede6;
+      margin-bottom: 6px;
+    }
+
+    .note-content {
+      font-size: 0.9rem;
+      color: #8892a4;
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+
+    .note-meta {
+      font-size: 0.75rem;
+      color: #4a5470;
+      margin-top: 12px;
+    }
+
+    .btn-delete {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: none;
+      border: none;
+      color: #4a5470;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: color 0.2s;
+    }
+
+    .btn-delete:hover { color: #e05c5c; }
+
+    .empty {
+      text-align: center;
+      color: #4a5470;
+      font-size: 0.9rem;
+      padding: 40px 0;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #e8a857;
+      color: #1a1f2e;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 0.85rem;
+      animation: slideUp 0.3s ease;
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Quick Notes</h1>
+  <p class="subtitle">Write it down. It's saved instantly.</p>
+
+  <div class="write-box">
+    <input type="text" id="noteTitle" placeholder="Note title..." />
+    <textarea id="noteContent" placeholder="What's on your mind?"></textarea>
+    <div class="actions">
+      <button class="btn-save" id="saveBtn" onclick="saveNote()">Save Note</button>
+    </div>
+  </div>
+
+  <div class="notes-header" id="notesHeader"></div>
+  <div id="notesList"></div>
+</div>
+
+<script>
+  const API = "http://localhost:8000";
+
+  async function loadNotes() {
+    try {
+      const res = await fetch(`${API}/notes`);
+      const notes = await res.json();
+      renderNotes(notes);
+    } catch (e) {
+      document.getElementById("notesList").innerHTML =
+        '<p class="empty">⚠️ Cannot connect to backend. Make sure uvicorn is running on port 8000.</p>';
+    }
+  }
+
+  function renderNotes(notes) {
+    const list = document.getElementById("notesList");
+    const header = document.getElementById("notesHeader");
+
+    if (notes.length === 0) {
+      header.textContent = "";
+      list.innerHTML = '<p class="empty">No notes yet — write your first one above.</p>';
+      return;
+    }
+
+    header.textContent = `${notes.length} note${notes.length !== 1 ? "s" : ""}`;
+    list.innerHTML = notes.map(note => `
+      <div class="note-card" id="note-${note.id}">
+        <button class="btn-delete" onclick="deleteNote(${note.id})" title="Delete">✕</button>
+        ${note.title ? `<div class="note-title">${escapeHtml(note.title)}</div>` : ""}
+        <div class="note-content">${escapeHtml(note.content)}</div>
+        <div class="note-meta">${formatDate(note.updated_at)}</div>
+      </div>
+    `).join("");
+  }
+
+  async function saveNote() {
+    const title = document.getElementById("noteTitle").value.trim();
+    const content = document.getElementById("noteContent").value.trim();
+
+    if (!title && !content) return showToast("Write something first!");
+
+    const btn = document.getElementById("saveBtn");
+    btn.disabled = true;
+    btn.textContent = "Saving...";
+
+    try {
+      const res = await fetch(`${API}/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, content })
+      });
+
+      if (!res.ok) throw new Error("Failed to save");
+
+      document.getElementById("noteTitle").value = "";
+      document.getElementById("noteContent").value = "";
+      showToast("Note saved!");
+      loadNotes();
+    } catch (e) {
+      showToast("Error saving note.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Save Note";
+    }
+  }
+
+  async function deleteNote(id) {
+    try {
+      await fetch(`${API}/notes/${id}`, { method: "DELETE" });
+      loadNotes();
+    } catch (e) {
+      showToast("Error deleting note.");
+    }
+  }
+
+  function showToast(msg) {
+    const existing = document.querySelector(".toast");
+    if (existing) existing.remove();
+    const toast = document.createElement("div");
+    toast.className = "toast";
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2500);
+  }
+
+  function formatDate(iso) {
+    const d = new Date(iso + "Z");
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric",
+      hour: "2-digit", minute: "2-digit" });
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+
+  // Save on Ctrl+Enter
+  document.addEventListener("keydown", e => {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) saveNote();
+  });
+
+  loadNotes();
+</script>
+</body>
+</html>
